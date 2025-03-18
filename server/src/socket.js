@@ -6,35 +6,33 @@ const onlineUsers = {}; // Track online users per room
 const roomAdmins = {};      // roomId -> { socketId, user }
 const pendingRequests = {}; // requesterSocketId -> { roomId, user }
 
+const cursorPositions = {}; // Store cursor positions per room
+
 export default function setupSocket(io) {
   io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`);
 
     // When a socket wants to join a room, send along roomId and user info.
     socket.on("joinRoom", (data) => {
-      // data = { roomId, user } where user contains uid and name.
       const { roomId, user } = data;
-      
+
       // If no admin exists, make the first joiner the admin.
       if (!roomAdmins[roomId]) {
         roomAdmins[roomId] = { socketId: socket.id, user };
         socket.join(roomId);
         users[socket.id] = roomId; // Save mapping for admin
         console.log(`Room ${roomId} created by admin ${user.name}`);
-        // notify the socket that they are admin
         socket.emit("roomAdminStatus", { isAdmin: true });
       } else {
-        // If the joining user is the admin rejoining (by uid), allow rejoin.
         if (roomAdmins[roomId].user.uid === user.uid) {
           socket.join(roomId);
           users[socket.id] = roomId; // Save mapping for admin rejoin
           socket.emit("roomAdminStatus", { isAdmin: true });
         } else {
-          // Otherwise, store a pending request and notify the admin.
           pendingRequests[socket.id] = { roomId, user };
           io.to(roomAdmins[roomId].socketId).emit("joinRequest", {
             requesterId: socket.id,
-            user
+            user,
           });
           console.log(`User ${user.name} requested to join room ${roomId}`);
         }
@@ -43,7 +41,6 @@ export default function setupSocket(io) {
 
     // Admin responds to a join request.
     socket.on("respondJoinRequest", (data) => {
-      // data = { requesterId, accepted }
       const request = pendingRequests[data.requesterId];
       if (request) {
         const roomId = request.roomId;
@@ -65,7 +62,7 @@ export default function setupSocket(io) {
       }
     });
 
-    // Listen for code changes (unchanged)
+    // Listen for code changes
     socket.on("codeChange", ({ code }) => {
       const roomId = users[socket.id] || null;
       if (roomId) {
@@ -74,27 +71,60 @@ export default function setupSocket(io) {
       }
     });
 
-    // Handle disconnections.
+    // NEW: Listen for cursor position updates
+    socket.on("cursorPosition", ({ roomId, user, position }) => {
+      if (!cursorPositions[roomId]) {
+        cursorPositions[roomId] = {};
+      }
+      // Attach the sender's socket id to the user object.
+      user.socketId = socket.id;
+      cursorPositions[roomId][user.uid] = { user, position };
+    
+      console.log(`Cursor position updated for user ${user.name}:`, position);
+      console.log(`Broadcasting cursor positions for room ${roomId}:`, cursorPositions[roomId]);
+    
+      // Broadcast the updated cursor positions to everyone except the sender.
+      socket.to(roomId).emit("updateCursorPositions", cursorPositions[roomId]);
+    });
+
+    // Handle disconnections
     socket.on("disconnect", () => {
       console.log(`User disconnected: ${socket.id}`);
-      // Remove from any onlineUsers list.
       let roomId = null;
+
+      // Remove from onlineUsers list
       for (const id in onlineUsers) {
         onlineUsers[id] = onlineUsers[id].filter((userId) => userId !== socket.id);
       }
-      // Remove pending join request if exists.
+
+      // Remove pending join request if exists
       if (pendingRequests[socket.id]) {
         delete pendingRequests[socket.id];
       }
-      // If an admin disconnects, you might want to reassign a new admin here.
+
+      // Remove cursor position if exists
+      for (const room in cursorPositions) {
+        for (const uid in cursorPositions[room]) {
+          if (cursorPositions[room][uid].user.socketId === socket.id) {
+            delete cursorPositions[room][uid];
+          }
+        }
+      }
+
+      // Notify others in the room about updated cursor positions
+      if (roomId && cursorPositions[roomId]) {
+        socket.to(roomId).emit("updateCursorPositions", cursorPositions[roomId]);
+      }
+
+      // Handle admin disconnection
       for (const room in roomAdmins) {
         if (roomAdmins[room].socketId === socket.id) {
           console.log(`Admin of room ${room} disconnected.`);
           delete roomAdmins[room];
-          // Optionally, notify others in the room or reassign admin.
         }
       }
-      // Optionally, remove the user's room mapping.
+
+      // Remove user's room mapping
       delete users[socket.id];
     });
   });
