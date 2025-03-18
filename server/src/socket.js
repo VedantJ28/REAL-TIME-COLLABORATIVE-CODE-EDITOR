@@ -1,64 +1,101 @@
-const users = {};    // Map socket.id -> roomId
-const roomCode = {}; // Store latest code per room
+const users = {};       // Map socket.id -> roomId
+const roomCode = {};    // Store latest code per room
 const onlineUsers = {}; // Track online users per room
+
+// NEW: Store the admin info per room and pending join requests.
+const roomAdmins = {};      // roomId -> { socketId, user }
+const pendingRequests = {}; // requesterSocketId -> { roomId, user }
 
 export default function setupSocket(io) {
   io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`);
 
-    // Assign user to a room
-    socket.on("joinRoom", (roomId) => {
-      socket.join(roomId);
-      users[socket.id] = roomId;
-
-      // Add the user to the onlineUsers list for the room
-      if (!onlineUsers[roomId]) {
-        onlineUsers[roomId] = [];
-      }
-      // Using socket.id as the user identifier; replace it with a username if available
-      onlineUsers[roomId].push(socket.id);
-
-      // Emit updated list of online users to everyone in the room
-      io.to(roomId).emit("updateUsers", onlineUsers[roomId]);
-
-      // Send the latest code state of this room to the new user
-      if (roomCode[roomId]) {
-        socket.emit("init", roomCode[roomId]);
+    // When a socket wants to join a room, send along roomId and user info.
+    socket.on("joinRoom", (data) => {
+      // data = { roomId, user } where user contains uid and name.
+      const { roomId, user } = data;
+      
+      // If no admin exists, make the first joiner the admin.
+      if (!roomAdmins[roomId]) {
+        roomAdmins[roomId] = { socketId: socket.id, user };
+        socket.join(roomId);
+        users[socket.id] = roomId; // Save mapping for admin
+        console.log(`Room ${roomId} created by admin ${user.name}`);
+        // notify the socket that they are admin
+        socket.emit("roomAdminStatus", { isAdmin: true });
       } else {
-        roomCode[roomId] = "";
+        // If the joining user is the admin rejoining (by uid), allow rejoin.
+        if (roomAdmins[roomId].user.uid === user.uid) {
+          socket.join(roomId);
+          users[socket.id] = roomId; // Save mapping for admin rejoin
+          socket.emit("roomAdminStatus", { isAdmin: true });
+        } else {
+          // Otherwise, store a pending request and notify the admin.
+          pendingRequests[socket.id] = { roomId, user };
+          io.to(roomAdmins[roomId].socketId).emit("joinRequest", {
+            requesterId: socket.id,
+            user
+          });
+          console.log(`User ${user.name} requested to join room ${roomId}`);
+        }
       }
-
-      console.log(`User ${socket.id} joined room ${roomId}`);
     });
 
-    // Listen for code changes
+    // Admin responds to a join request.
+    socket.on("respondJoinRequest", (data) => {
+      // data = { requesterId, accepted }
+      const request = pendingRequests[data.requesterId];
+      if (request) {
+        const roomId = request.roomId;
+        const requesterSocket = io.sockets.sockets.get(data.requesterId);
+        if (data.accepted) {
+          requesterSocket.join(roomId);
+          users[data.requesterId] = roomId; // Save mapping when approved
+          requesterSocket.emit("joinAccepted", { roomId });
+          console.log(
+            `Admin approved join request for ${request.user.name} in room ${roomId}`
+          );
+        } else {
+          requesterSocket.emit("joinRejected", { roomId });
+          console.log(
+            `Admin rejected join request for ${request.user.name} in room ${roomId}`
+          );
+        }
+        delete pendingRequests[data.requesterId];
+      }
+    });
+
+    // Listen for code changes (unchanged)
     socket.on("codeChange", ({ code }) => {
-      const roomId = users[socket.id];
+      const roomId = users[socket.id] || null;
       if (roomId) {
         roomCode[roomId] = typeof code === "string" ? code : "";
         socket.to(roomId).emit("codeUpdate", roomCode[roomId]);
       }
     });
 
-    // Handle user disconnection
+    // Handle disconnections.
     socket.on("disconnect", () => {
       console.log(`User disconnected: ${socket.id}`);
-      const roomId = users[socket.id];
-      delete users[socket.id];
-
-      // Remove the user from onlineUsers and emit the updated list
-      if (roomId && onlineUsers[roomId]) {
-        onlineUsers[roomId] = onlineUsers[roomId].filter(
-          (user) => user !== socket.id
-        );
-        io.to(roomId).emit("updateUsers", onlineUsers[roomId]);
-
-        // Optional: Clean up empty rooms
-        if (onlineUsers[roomId].length === 0) {
-          delete onlineUsers[roomId];
-          delete roomCode[roomId];
+      // Remove from any onlineUsers list.
+      let roomId = null;
+      for (const id in onlineUsers) {
+        onlineUsers[id] = onlineUsers[id].filter((userId) => userId !== socket.id);
+      }
+      // Remove pending join request if exists.
+      if (pendingRequests[socket.id]) {
+        delete pendingRequests[socket.id];
+      }
+      // If an admin disconnects, you might want to reassign a new admin here.
+      for (const room in roomAdmins) {
+        if (roomAdmins[room].socketId === socket.id) {
+          console.log(`Admin of room ${room} disconnected.`);
+          delete roomAdmins[room];
+          // Optionally, notify others in the room or reassign admin.
         }
       }
+      // Optionally, remove the user's room mapping.
+      delete users[socket.id];
     });
   });
 }
