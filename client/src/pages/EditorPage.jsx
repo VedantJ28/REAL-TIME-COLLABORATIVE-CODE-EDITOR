@@ -1,3 +1,4 @@
+// ...existing code...
 import React, { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import CodeEditor from "../components/Editor";
@@ -14,25 +15,31 @@ const EditorPage = () => {
   const user = searchParams.get("name") || "Guest";
   const [isAdmin, setIsAdmin] = useState(false);
   const [roomClosedAlert, setRoomClosedAlert] = useState(null);
-  // Replace boolean state with a string message for confirmation
   const [confirmLeaveMessage, setConfirmLeaveMessage] = useState(null);
+  const [language, setLanguage] = useState("javascript");
 
-  // Listen for admin status and room events
   useEffect(() => {
     socket.on("roomAdminStatus", (data) => {
       setIsAdmin(data.isAdmin);
     });
 
     socket.on("roomClosed", () => {
-      // Only show alert when the room is closed for non-admin users
       if (!isAdmin) {
         setRoomClosedAlert("Room closed by admin. You will be redirected.");
+      }
+    });
+
+    // Listen for language changes from admin and update if not admin
+    socket.on("languageUpdate", (data) => {
+      if (!isAdmin) {
+        setLanguage(data.language);
       }
     });
 
     return () => {
       socket.off("roomAdminStatus");
       socket.off("roomClosed");
+      socket.off("languageUpdate");
     };
   }, [isAdmin, navigate]);
 
@@ -46,7 +53,6 @@ const EditorPage = () => {
     }
   };
 
-  // Handler for confirmation alert (for both admin and non-admin leaving)
   const handleConfirmLeave = () => {
     if (isAdmin) {
       socket.emit("closeRoom", { roomId });
@@ -61,17 +67,33 @@ const EditorPage = () => {
     setConfirmLeaveMessage(null);
   };
 
+  // Only admin can change the language.
+  const handleLanguageChange = (e) => {
+    if (isAdmin) {
+      const newLanguage = e.target.value;
+      setLanguage(newLanguage);
+      socket.emit("languageChange", { roomId, language: newLanguage });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Navbar */}
-      <Navbar roomId={roomId} user={user} onLeaveRoom={onLeaveRoom} />
+      <Navbar
+        roomId={roomId}
+        user={user}
+        onLeaveRoom={onLeaveRoom}
+        selectedLanguage={language}
+        onLanguageChange={handleLanguageChange}
+        isAdmin={isAdmin}
+      />
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
         {/* Code Editor Section */}
         <main className="flex-1 p-4">
           <div className="bg-white shadow rounded-lg h-full overflow-hidden">
-            <CodeEditor roomId={roomId} />
+            <CodeEditor roomId={roomId} language={language} />
           </div>
         </main>
 

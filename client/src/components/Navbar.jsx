@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import UserList from "./UserList";
 
-const Navbar = ({ roomId, user, onLeaveRoom }) => {
+const Navbar = ({ roomId, user, onLeaveRoom, selectedLanguage, onLanguageChange, isAdmin }) => {
   const [showDropdown, setShowDropdown] = useState(false);
 
   return (
@@ -17,6 +17,20 @@ const Navbar = ({ roomId, user, onLeaveRoom }) => {
         >
           Leave Room
         </button>
+        {/* Render language selection only if user is admin */}
+        {isAdmin && (
+          <select
+            value={selectedLanguage}
+            onChange={onLanguageChange}
+            className="border rounded px-2 py-1 focus:outline-none"
+          >
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="cpp">C++</option>
+            <option value="csharp">C#</option>
+          </select>
+        )}
         <div className="relative">
           <button
             onClick={() => setShowDropdown((prev) => !prev)}
@@ -24,11 +38,13 @@ const Navbar = ({ roomId, user, onLeaveRoom }) => {
           >
             Users ▼
           </button>
-          {showDropdown && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-lg z-10">
-              <UserList />
-            </div>
-          )}
+          <div
+            className={`absolute right-0 mt-2 w-48 bg-white border rounded shadow-lg z-10 transition-all duration-300 ${
+              showDropdown ? "" : "hidden"
+            }`}
+          >
+            <UserList />
+          </div>
         </div>
       </div>
     </nav>

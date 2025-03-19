@@ -1,25 +1,26 @@
 import React, { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import { useParams, useNavigate } from "react-router-dom";
-import socket, { joinRoom, sendCodeChange, sendCursorPosition } from "../utils/socket";
+import socket, {
+  joinRoom,
+  sendCodeChange,
+  sendCursorPosition,
+} from "../utils/socket";
 import { auth } from "../utils/firebase";
 import * as monaco from "monaco-editor";
 
-const CodeEditor = () => {
+const CodeEditor = ({ language }) => {
   const { roomId } = useParams();
+  const navigate = useNavigate();
   const [code, setCode] = useState("// Start coding...");
   const [isAdmin, setIsAdmin] = useState(false);
   const [isJoinAccepted, setIsJoinAccepted] = useState(false);
-  // cursorPositions stores both local and remote reported positions.
   const [cursorPositions, setCursorPositions] = useState({});
   const editorRef = useRef(null);
-  // Map for local user decoration – only local cursor is updated via decoration.
   const decorationMappingRef = useRef({});
-  // Object to hold remote cursor content widgets (uid -> widget)
   const remoteCursorWidgetsRef = useRef({});
-  const navigate = useNavigate();
 
-  // Setup socket events.
+  // Socket events to join room, update code, and update cursor positions.
   useEffect(() => {
     const currentUser = auth.currentUser;
     if (currentUser) {
@@ -31,15 +32,11 @@ const CodeEditor = () => {
 
     socket.on("roomAdminStatus", (data) => {
       setIsAdmin(data.isAdmin);
-      if (data.isAdmin) {
-        setIsJoinAccepted(true);
-      }
+      if (data.isAdmin) setIsJoinAccepted(true);
     });
 
     socket.on("joinAccepted", (data) => {
-      if (data.roomId === roomId) {
-        setIsJoinAccepted(true);
-      }
+      if (data.roomId === roomId) setIsJoinAccepted(true);
     });
 
     socket.on("joinRejected", (data) => {
@@ -50,18 +47,15 @@ const CodeEditor = () => {
     });
 
     socket.on("codeUpdate", (newCode) => {
-      if (typeof newCode === "string") {
-        setCode(newCode);
-      }
+      if (typeof newCode === "string") setCode(newCode);
     });
 
-    // Handle remote cursor updates and preserve the local user's cursor.
     socket.on("updateCursorPositions", (positions) => {
       console.log("Received updated cursor positions:", positions);
       const currentUser = auth.currentUser;
       setCursorPositions((prev) => {
         const newPositions = { ...positions };
-        // Preserve local user's current position.
+        // Preserve local user's position.
         if (currentUser && prev[currentUser.uid]) {
           newPositions[currentUser.uid] = prev[currentUser.uid];
         }
@@ -83,6 +77,7 @@ const CodeEditor = () => {
     sendCodeChange(roomId, newCode);
   };
 
+  // Emit local cursor position changes and update local state.
   const handleCursorChange = () => {
     const currentUser = auth.currentUser;
     if (currentUser && editorRef.current) {
@@ -90,24 +85,33 @@ const CodeEditor = () => {
       console.log("Emitting cursor position:", position);
       sendCursorPosition(
         roomId,
-        { uid: currentUser.uid, name: currentUser.displayName || currentUser.email },
+        {
+          uid: currentUser.uid,
+          name: currentUser.displayName || currentUser.email,
+        },
         position
       );
-      // Save the local user’s updated cursor position.
       setCursorPositions((prev) => ({
         ...prev,
         [currentUser.uid]: {
-          user: { uid: currentUser.uid, name: currentUser.displayName || currentUser.email },
+          user: {
+            uid: currentUser.uid,
+            name: currentUser.displayName || currentUser.email,
+          },
           position,
         },
       }));
     }
   };
 
-  // Update decoration for the local user's cursor.
+  // Update local user's cursor decoration.
   useEffect(() => {
     const currentUser = auth.currentUser;
-    if (editorRef.current && currentUser && cursorPositions[currentUser.uid]) {
+    if (
+      editorRef.current &&
+      currentUser &&
+      cursorPositions[currentUser.uid]
+    ) {
       const localPos = cursorPositions[currentUser.uid].position;
       const decoration = {
         range: new monaco.Range(
@@ -119,21 +123,25 @@ const CodeEditor = () => {
         options: {
           beforeContentClassName: `cursor-pointer-${currentUser.uid}`,
           afterContentClassName: `cursor-label-${currentUser.uid}`,
-          stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+          stickiness:
+            monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
         },
       };
       const oldDecorations = Object.values(decorationMappingRef.current);
-      const newDecorationIds = editorRef.current.deltaDecorations(oldDecorations, [decoration]);
+      const newDecorationIds = editorRef.current.deltaDecorations(
+        oldDecorations,
+        [decoration]
+      );
       decorationMappingRef.current[currentUser.uid] = newDecorationIds[0];
     }
   }, [cursorPositions]);
 
-  // Update or create content widgets for remote cursors.
+  // Create or update remote cursor widgets.
   useEffect(() => {
     const currentUser = auth.currentUser;
     if (editorRef.current) {
       Object.entries(cursorPositions).forEach(([uid, { user, position }]) => {
-        // Skip creating a widget for the local user.
+        // Skip local user.
         if (currentUser && uid === currentUser.uid) return;
         let widget = remoteCursorWidgetsRef.current[uid];
         if (!widget) {
@@ -145,19 +153,47 @@ const CodeEditor = () => {
               return this.domNode;
             },
             getPosition: () => ({
-              position: { lineNumber: position.lineNumber, column: position.column },
-              preference: [monaco.editor.ContentWidgetPositionPreference.EXACT],
+              position: {
+                lineNumber: position.lineNumber,
+                column: position.column,
+              },
+              preference: [
+                monaco.editor.ContentWidgetPositionPreference.EXACT,
+              ],
             }),
           };
-          widget.domNode.style.borderLeft = `2px solid ${getColorForUser(uid)}`;
-          widget.domNode.style.height = "1em";
+          // Updated styling for remote user's floating box to be uniform with local cursor.
           widget.domNode.style.position = "absolute";
+          // Place the box below the cursor with a slight offset.
+          widget.domNode.style.transform = "translate(0%, calc(100% + 4px))";
+          widget.domNode.style.background = getColorForUser(uid);
+          widget.domNode.style.color = "#fff";
+          // Use same dimensions as local pointer indicator.
+          widget.domNode.style.width = "16px";
+          widget.domNode.style.height = "16px";
+          widget.domNode.style.display = "flex";
+          widget.domNode.style.alignItems = "center";
+          widget.domNode.style.justifyContent = "center";
+          widget.domNode.style.fontSize = "10px";
+          widget.domNode.style.lineHeight = "16px";
+          widget.domNode.style.borderRadius = "3px";
+          widget.domNode.style.zIndex = "10";
+          widget.domNode.style.whiteSpace = "nowrap";
+          widget.domNode.style.textAlign = "center";
+          // Set a title to mimic hover effect (show full name)
+          widget.domNode.title = user.name;
+          widget.domNode.innerText = user.name.charAt(0);
           editorRef.current.addContentWidget(widget);
           remoteCursorWidgetsRef.current[uid] = widget;
         } else {
           widget.getPosition = () => ({
-            position: { lineNumber: position.lineNumber, column: position.column },
-            preference: [monaco.editor.ContentWidgetPositionPreference.EXACT],
+            position: {
+              lineNumber: position.lineNumber,
+              column: position.column,
+            },
+            preference: [
+              monaco.editor.ContentWidgetPositionPreference.EXACT,
+            ],
           });
           editorRef.current.layoutContentWidget(widget);
         }
@@ -165,32 +201,40 @@ const CodeEditor = () => {
     }
   }, [cursorPositions]);
 
-  // Listen to content changes—for example, newline insertions.
+  // Update the editor's language when the prop changes.
+  useEffect(() => {
+    if (editorRef.current) {
+      const model = editorRef.current.getModel();
+      if (model) {
+        monaco.editor.setModelLanguage(model, language);
+      }
+    }
+  }, [language]);
+
+  // Listen for content changes (if additional handling is needed).
   useEffect(() => {
     if (editorRef.current) {
       const model = editorRef.current.getModel();
       const disposables = model.onDidChangeContent((e) => {
-        // You can update the cursor here on specific content changes if needed.
+        // Handle content changes if required.
       });
       return () => disposables.dispose();
     }
   }, []);
 
-  // Render dynamic styles for the local cursor.
+  // Render style for the local cursor indicator.
   const renderCursorStyles = () => {
     const currentUser = auth.currentUser;
     if (!currentUser) return null;
     const color = getColorForUser(currentUser.uid);
     const fullName = currentUser.displayName || currentUser.email;
-    const initial = fullName.charAt(0).toUpperCase();
+    const initial = fullName.charAt(0);
     return (
       <style>
         {`
-          /* Ensure the cursor element is positioned relative */
           .cursor-pointer-${currentUser.uid} {
             position: relative;
           }
-          /* Small box below the cursor showing the initial */
           .cursor-pointer-${currentUser.uid}::before {
             content: '${initial}';
             position: absolute;
@@ -206,7 +250,6 @@ const CodeEditor = () => {
             font-size: 10px;
             border-radius: 3px;
           }
-          /* Hidden full name label that appears on hover */
           .cursor-pointer-${currentUser.uid}::after {
             content: "${fullName}";
             position: absolute;
@@ -230,6 +273,7 @@ const CodeEditor = () => {
     );
   };
 
+  // Helper to choose a color for each remote user.
   const getColorForUser = (uid) => {
     const colors = ["#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF"];
     const index = uid.charCodeAt(0) % colors.length;
@@ -239,8 +283,12 @@ const CodeEditor = () => {
   if (!isJoinAccepted) {
     return (
       <div className="flex flex-col justify-center items-center p-8">
-        <h2 className="text-2xl font-bold mb-2">Waiting for admin approval...</h2>
-        <p className="text-gray-600">Please wait while the admin approves your join request.</p>
+        <h2 className="text-2xl font-bold mb-2">
+          Waiting for admin approval...
+        </h2>
+        <p className="text-gray-600">
+          Please wait while the admin approves your join request.
+        </p>
       </div>
     );
   }
@@ -249,14 +297,13 @@ const CodeEditor = () => {
     <div className="bg-gray-800 rounded-lg shadow-lg mx-6 my-6 p-4">
       <Editor
         height="75vh"
-        defaultLanguage="javascript"
+        language={language}
         value={code}
         onChange={handleCodeChange}
         theme="vs-dark"
         onMount={(editor) => {
           console.log("Editor mounted:", editor);
           editorRef.current = editor;
-          // Listen for every cursor selection change.
           editor.onDidChangeCursorSelection(() => {
             console.log("Cursor selection changed");
             handleCursorChange();

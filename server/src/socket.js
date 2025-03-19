@@ -1,7 +1,7 @@
 const users = {};       // Map socket.id -> roomId
 const roomCode = {};    // Store latest code per room
 // Updated onlineUsers: roomId -> { [socket.id]: userObject }
-const onlineUsers = {}; 
+const onlineUsers = {};
 
 // Store the admin info per room and pending join requests.
 const roomAdmins = {};      // roomId -> { socketId, user }
@@ -122,6 +122,12 @@ export default function setupSocket(io) {
           delete onlineUsers[roomId];
         }
       }
+    });
+
+    // Add this below the other socket event listeners
+    socket.on("languageChange", ({ roomId, language }) => {
+      console.log(`Language changed to ${language} in room ${roomId}`);
+      socket.to(roomId).emit("languageUpdate", { language });
     });
 
     // Handle disconnections
