@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:5000"); // Backend URL
+const socket = io("https://real-time-collaborative-code-editor-dlbu.vercel.app"); // Backend URL
 
 export const joinRoom = (roomId, user) => {
   console.log("Joining room:", { roomId, user }); // Debug log
