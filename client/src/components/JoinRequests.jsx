@@ -6,8 +6,13 @@ const JoinRequests = ({ setPendingRequestsCount }) => {
 
   useEffect(() => {
     socket.on("joinRequest", (data) => {
-      // data: { requesterId, user }
-      setRequests((prev) => [...prev, data]);
+      // Prevent duplicate requests
+      setRequests((prev) => {
+        if (prev.some((req) => req.requesterId === data.requesterId)) {
+          return prev; // If request already exists, return the current state
+        }
+        return [...prev, data];
+      });
     });
 
     return () => socket.off("joinRequest");
