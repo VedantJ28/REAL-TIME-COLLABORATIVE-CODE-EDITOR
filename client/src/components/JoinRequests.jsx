@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import socket from "../utils/socket";
 
-const JoinRequests = () => {
+const JoinRequests = ({ setPendingRequestsCount }) => {
   const [requests, setRequests] = useState([]);
 
   useEffect(() => {
@@ -9,8 +9,14 @@ const JoinRequests = () => {
       // data: { requesterId, user }
       setRequests((prev) => [...prev, data]);
     });
+
     return () => socket.off("joinRequest");
   }, []);
+
+  useEffect(() => {
+    // Update the pending requests count whenever the requests list changes
+    setPendingRequestsCount(requests.length);
+  }, [requests, setPendingRequestsCount]);
 
   const respond = (requesterId, accepted) => {
     socket.emit("respondJoinRequest", { requesterId, accepted });
@@ -20,30 +26,27 @@ const JoinRequests = () => {
   };
 
   return (
-    <div className="bg-white shadow rounded-lg p-4 mt-4">
-      {/* <h3 className="text-lg font-medium text-gray-800 mb-4">Join Requests</h3> */}
+    <div>
       {requests.length === 0 ? (
         <p className="text-gray-600">No pending requests.</p>
       ) : (
-        <ul className="space-y-4">
+        <ul className="space-y-2">
           {requests.map((req) => (
             <li
               key={req.requesterId}
-              className="flex items-center justify-between border border-gray-200 p-3 rounded"
+              className="flex items-center justify-between border border-gray-200 p-2 rounded"
             >
-              <span className="text-gray-700">
-                {req.user.name} wants to join
-              </span>
+              <span className="text-gray-700">{req.user.name}</span>
               <div className="flex space-x-2">
                 <button
                   onClick={() => respond(req.requesterId, true)}
-                  className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-300"
+                  className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none"
                 >
                   Accept
                 </button>
                 <button
                   onClick={() => respond(req.requesterId, false)}
-                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none"
                 >
                   Reject
                 </button>

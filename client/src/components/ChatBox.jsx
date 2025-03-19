@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, query, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "../utils/firebase";
 import socket from "../utils/socket";
 
 const ChatBox = ({ roomId, user }) => {
@@ -8,26 +6,49 @@ const ChatBox = ({ roomId, user }) => {
   const [newMessage, setNewMessage] = useState("");
 
   useEffect(() => {
-    const q = query(
-      collection(db, "rooms", roomId, "messages"),
-      orderBy("timestamp")
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setMessages(snapshot.docs.map((doc) => doc.data()));
+    // Join the room and request chat history
+    socket.emit("joinRoom", { roomId, user });
+  
+    // Listen for chat history
+    socket.on("chatHistory", (history) => {
+      setMessages(history);
     });
-
-    return () => unsubscribe();
+  
+    // Listen for new messages
+    socket.on("messageReceived", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+  
+    // Listen for room closure
+    socket.on("roomClosed", () => {
+      setMessages([]); // Clear messages locally
+    });
+  
+    // Handle join accepted
+    socket.on("joinAccepted", ({ roomId, user }) => {
+      console.log(`Join accepted for room ${roomId} as user ${user.name}`);
+    });
+  
+    // Handle join rejected
+    socket.on("joinRejected", ({ roomId }) => {
+      console.error(`Join request rejected for room ${roomId}`);
+      alert("Your join request was rejected.");
+    });
+  
+    return () => {
+      socket.off("chatHistory");
+      socket.off("messageReceived");
+      socket.off("roomClosed");
+      socket.off("joinAccepted");
+      socket.off("joinRejected");
+    };
   }, [roomId]);
 
-  const sendMessage = async () => {
+  const sendMessage = () => {
     if (newMessage.trim() === "") return;
-    await addDoc(collection(db, "rooms", roomId, "messages"), {
-      user,
-      text: newMessage,
-      timestamp: new Date(),
-    });
 
-    socket.emit("newMessage", { user, text: newMessage });
+    // Emit the new message to the server
+    socket.emit("newMessage", { roomId, user, text: newMessage });
     setNewMessage("");
   };
 

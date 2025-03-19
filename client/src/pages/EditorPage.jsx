@@ -99,16 +99,10 @@ const EditorPage = () => {
 
         {/* Sidebar Section: Chat, Conditional Join Requests (admin), & Active Users */}
         <aside className="w-full lg:w-1/3 p-4 space-y-4">
-          <div className="bg-white shadow rounded-lg p-4">
+          <div className="bg-white shadow rounded-lg p-4 h-full">
             <h2 className="text-xl font-bold text-gray-800 mb-2">Chat</h2>
             <ChatBox roomId={roomId} user={user} />
           </div>
-          {isAdmin && (
-            <div className="bg-white shadow rounded-lg p-4">
-              <h2 className="text-xl font-bold text-gray-800 mb-2">Join Requests</h2>
-              <JoinRequests roomId={roomId} />
-            </div>
-          )}
         </aside>
       </div>
 
@@ -123,10 +117,7 @@ const EditorPage = () => {
 
       {/* Room closed alert for non-admin users */}
       {roomClosedAlert && (
-        <Alert
-          message={roomClosedAlert}
-          onConfirm={() => navigate("/")}
-        />
+        <Alert message={roomClosedAlert} onConfirm={() => navigate("/")} />
       )}
     </div>
   );

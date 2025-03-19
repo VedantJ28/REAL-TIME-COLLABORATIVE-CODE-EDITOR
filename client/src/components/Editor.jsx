@@ -20,7 +20,6 @@ const CodeEditor = ({ language }) => {
   const decorationMappingRef = useRef({});
   const remoteCursorWidgetsRef = useRef({});
 
-  // Socket events to join room, update code, and update cursor positions.
   useEffect(() => {
     const currentUser = auth.currentUser;
     if (currentUser) {
@@ -51,11 +50,9 @@ const CodeEditor = ({ language }) => {
     });
 
     socket.on("updateCursorPositions", (positions) => {
-      console.log("Received updated cursor positions:", positions);
       const currentUser = auth.currentUser;
       setCursorPositions((prev) => {
         const newPositions = { ...positions };
-        // Preserve local user's position.
         if (currentUser && prev[currentUser.uid]) {
           newPositions[currentUser.uid] = prev[currentUser.uid];
         }
@@ -77,12 +74,10 @@ const CodeEditor = ({ language }) => {
     sendCodeChange(roomId, newCode);
   };
 
-  // Emit local cursor position changes and update local state.
   const handleCursorChange = () => {
     const currentUser = auth.currentUser;
     if (currentUser && editorRef.current) {
       const position = editorRef.current.getPosition();
-      console.log("Emitting cursor position:", position);
       sendCursorPosition(
         roomId,
         {
@@ -104,7 +99,6 @@ const CodeEditor = ({ language }) => {
     }
   };
 
-  // Update local user's cursor decoration.
   useEffect(() => {
     const currentUser = auth.currentUser;
     if (
@@ -136,12 +130,10 @@ const CodeEditor = ({ language }) => {
     }
   }, [cursorPositions]);
 
-  // Create or update remote cursor widgets.
   useEffect(() => {
     const currentUser = auth.currentUser;
     if (editorRef.current) {
       Object.entries(cursorPositions).forEach(([uid, { user, position }]) => {
-        // Skip local user.
         if (currentUser && uid === currentUser.uid) return;
         let widget = remoteCursorWidgetsRef.current[uid];
         if (!widget) {
@@ -162,13 +154,10 @@ const CodeEditor = ({ language }) => {
               ],
             }),
           };
-          // Updated styling for remote user's floating box to be uniform with local cursor.
           widget.domNode.style.position = "absolute";
-          // Place the box below the cursor with a slight offset.
           widget.domNode.style.transform = "translate(0%, calc(100% + 4px))";
           widget.domNode.style.background = getColorForUser(uid);
           widget.domNode.style.color = "#fff";
-          // Use same dimensions as local pointer indicator.
           widget.domNode.style.width = "16px";
           widget.domNode.style.height = "16px";
           widget.domNode.style.display = "flex";
@@ -180,7 +169,6 @@ const CodeEditor = ({ language }) => {
           widget.domNode.style.zIndex = "10";
           widget.domNode.style.whiteSpace = "nowrap";
           widget.domNode.style.textAlign = "center";
-          // Set a title to mimic hover effect (show full name)
           widget.domNode.title = user.name;
           widget.domNode.innerText = user.name.charAt(0);
           editorRef.current.addContentWidget(widget);
@@ -201,7 +189,6 @@ const CodeEditor = ({ language }) => {
     }
   }, [cursorPositions]);
 
-  // Update the editor's language when the prop changes.
   useEffect(() => {
     if (editorRef.current) {
       const model = editorRef.current.getModel();
@@ -211,18 +198,6 @@ const CodeEditor = ({ language }) => {
     }
   }, [language]);
 
-  // Listen for content changes (if additional handling is needed).
-  useEffect(() => {
-    if (editorRef.current) {
-      const model = editorRef.current.getModel();
-      const disposables = model.onDidChangeContent((e) => {
-        // Handle content changes if required.
-      });
-      return () => disposables.dispose();
-    }
-  }, []);
-
-  // Render style for the local cursor indicator.
   const renderCursorStyles = () => {
     const currentUser = auth.currentUser;
     if (!currentUser) return null;
@@ -250,30 +225,11 @@ const CodeEditor = ({ language }) => {
             font-size: 10px;
             border-radius: 3px;
           }
-          .cursor-pointer-${currentUser.uid}::after {
-            content: "${fullName}";
-            position: absolute;
-            bottom: -40px;
-            left: 0;
-            background: #333;
-            color: #fff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 12px;
-            white-space: nowrap;
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
-            pointer-events: none;
-          }
-          .cursor-pointer-${currentUser.uid}:hover::after {
-            opacity: 1;
-          }
         `}
       </style>
     );
   };
 
-  // Helper to choose a color for each remote user.
   const getColorForUser = (uid) => {
     const colors = ["#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF"];
     const index = uid.charCodeAt(0) % colors.length;
@@ -282,10 +238,8 @@ const CodeEditor = ({ language }) => {
 
   if (!isJoinAccepted) {
     return (
-      <div className="flex flex-col justify-center items-center p-8">
-        <h2 className="text-2xl font-bold mb-2">
-          Waiting for admin approval...
-        </h2>
+      <div className="flex flex-col justify-center items-center p-4 h-full">
+        <h2 className="text-xl font-bold mb-2">Waiting for admin approval...</h2>
         <p className="text-gray-600">
           Please wait while the admin approves your join request.
         </p>
@@ -294,22 +248,23 @@ const CodeEditor = ({ language }) => {
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg shadow-lg mx-6 my-6 p-4">
+    <div className="h-full p-2">
       <Editor
-        height="75vh"
+        height="100%"
         language={language}
         value={code}
         onChange={handleCodeChange}
         theme="vs-dark"
         onMount={(editor) => {
-          console.log("Editor mounted:", editor);
           editorRef.current = editor;
           editor.onDidChangeCursorSelection(() => {
-            console.log("Cursor selection changed");
             handleCursorChange();
           });
         }}
-        className="mb-4"
+        options={{
+          fontSize: 20, // Increased font size
+        }}
+        className="rounded-lg shadow-lg"
       />
       {renderCursorStyles()}
     </div>
