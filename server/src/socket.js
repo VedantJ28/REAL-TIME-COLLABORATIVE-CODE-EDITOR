@@ -23,16 +23,16 @@ export default function setupSocket(io) {
     // When a socket wants to join a room, send along roomId and user info.
     socket.on("joinRoom", async (data) => {
       const { roomId, user } = data;
-    
+
       // Validate the user object
       if (!user || !user.name || !user.uid) {
         console.error("Invalid user object:", user);
         socket.emit("error", { message: "Invalid user object" });
         return;
       }
-    
+
       if (!onlineUsers[roomId]) onlineUsers[roomId] = {};
-    
+
       // If no admin exists, make the first joiner the admin.
       if (!roomAdmins[roomId]) {
         roomAdmins[roomId] = { socketId: socket.id, user };
@@ -41,7 +41,7 @@ export default function setupSocket(io) {
         onlineUsers[roomId][socket.id] = user;
         console.log(`Room ${roomId} created by admin ${user.name}`);
         socket.emit("roomAdminStatus", { isAdmin: true });
-    
+
         // Send empty chat history to the admin
         socket.emit("chatHistory", []);
         emitUpdatedUsers(io, roomId);
@@ -51,7 +51,7 @@ export default function setupSocket(io) {
           users[socket.id] = roomId;
           onlineUsers[roomId][socket.id] = user;
           socket.emit("roomAdminStatus", { isAdmin: true });
-    
+
           // Send chat history to the admin
           const chatHistory = await getChatMessages(roomId);
           socket.emit("chatHistory", chatHistory);
@@ -83,6 +83,9 @@ export default function setupSocket(io) {
             `Admin approved join request for ${request.user.name} in room ${roomId}`
           );
           emitUpdatedUsers(io, roomId);
+
+          // Notify all users except admin about the new user joining
+          io.to(roomId).emit("userJoined", { user: request.user });
         } else {
           requesterSocket.emit("joinRejected", { roomId });
           console.log(
@@ -140,10 +143,16 @@ export default function setupSocket(io) {
     // Listen for non-admin leaving the room.
     socket.on("leaveRoom", ({ roomId }) => {
       socket.leave(roomId);
+      const user = onlineUsers[roomId]?.[socket.id];
       delete users[socket.id];
       if (onlineUsers[roomId]) {
         delete onlineUsers[roomId][socket.id];
         emitUpdatedUsers(io, roomId);
+
+        // Notify all users about the user leaving
+        if (user) {
+          io.to(roomId).emit("userLeft", { user });
+        }
       }
       console.log(`Socket ${socket.id} left room ${roomId}`);
     });
@@ -196,8 +205,14 @@ export default function setupSocket(io) {
       }
       const roomId = users[socket.id];
       if (roomId && onlineUsers[roomId]) {
+        const user = onlineUsers[roomId][socket.id];
         delete onlineUsers[roomId][socket.id];
         emitUpdatedUsers(io, roomId);
+
+        // Notify all users about the user leaving
+        if (user) {
+          io.to(roomId).emit("userLeft", { user });
+        }
       }
       delete users[socket.id];
     });

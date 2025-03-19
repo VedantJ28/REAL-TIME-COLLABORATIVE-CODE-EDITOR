@@ -1,11 +1,10 @@
-// ...existing code...
 import React, { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import CodeEditor from "../components/Editor";
 import ChatBox from "../components/ChatBox";
-import JoinRequests from "../components/JoinRequests";
 import Navbar from "../components/Navbar";
 import Alert from "../components/Alert";
+import UserNotificationBanner from "../components/UserNotificationBanner";
 import socket from "../utils/socket";
 
 const EditorPage = () => {
@@ -17,6 +16,7 @@ const EditorPage = () => {
   const [roomClosedAlert, setRoomClosedAlert] = useState(null);
   const [confirmLeaveMessage, setConfirmLeaveMessage] = useState(null);
   const [language, setLanguage] = useState("javascript");
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     socket.on("roomAdminStatus", (data) => {
@@ -29,19 +29,34 @@ const EditorPage = () => {
       }
     });
 
-    // Listen for language changes from admin and update if not admin
-    socket.on("languageUpdate", (data) => {
+    // Listen for user join/leave events
+    socket.on("userJoined", (data) => {
       if (!isAdmin) {
-        setLanguage(data.language);
+        addNotification(`${data.user.name} joined the room`, "join");
       }
+    });
+
+    socket.on("userLeft", (data) => {
+      addNotification(`${data.user.name} left the room`, "leave");
     });
 
     return () => {
       socket.off("roomAdminStatus");
       socket.off("roomClosed");
-      socket.off("languageUpdate");
+      socket.off("userJoined");
+      socket.off("userLeft");
     };
-  }, [isAdmin, navigate]);
+  }, [isAdmin]);
+
+  const addNotification = (message, type) => {
+    const id = Date.now();
+    setNotifications((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => removeNotification(id), 5000); // Auto-remove after 5 seconds
+  };
+
+  const removeNotification = (id) => {
+    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+  };
 
   const onLeaveRoom = () => {
     if (isAdmin) {
@@ -67,7 +82,6 @@ const EditorPage = () => {
     setConfirmLeaveMessage(null);
   };
 
-  // Only admin can change the language.
   const handleLanguageChange = (e) => {
     if (isAdmin) {
       const newLanguage = e.target.value;
@@ -88,6 +102,12 @@ const EditorPage = () => {
         isAdmin={isAdmin}
       />
 
+      {/* Notification Banner */}
+      <UserNotificationBanner
+        notifications={notifications}
+        removeNotification={removeNotification}
+      />
+
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
         {/* Code Editor Section */}
@@ -97,7 +117,7 @@ const EditorPage = () => {
           </div>
         </main>
 
-        {/* Sidebar Section: Chat, Conditional Join Requests (admin), & Active Users */}
+        {/* Sidebar Section */}
         <aside className="w-full lg:w-1/3 p-4 space-y-4">
           <div className="bg-white shadow rounded-lg p-4 h-full">
             <h2 className="text-xl font-bold text-gray-800 mb-2">Chat</h2>
