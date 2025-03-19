@@ -33,6 +33,10 @@ app.post("/chat/send", async (req, res) => {
   res.status(200).json({ success: true });
 });
 
+app.get('/', (req, res) =>{
+  res.send("Hello World")
+});
+
 server.listen(process.env.PORT || 5000, () => {
   console.log(`Server running on port ${process.env.PORT || 5000}`);
 });
