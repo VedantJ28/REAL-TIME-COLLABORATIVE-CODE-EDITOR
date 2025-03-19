@@ -3,7 +3,6 @@ import Editor from "@monaco-editor/react";
 import { useParams, useNavigate } from "react-router-dom";
 import socket, { joinRoom, sendCodeChange, sendCursorPosition } from "../utils/socket";
 import { auth } from "../utils/firebase";
-import JoinRequests from "./JoinRequests";
 import * as monaco from "monaco-editor";
 
 const CodeEditor = () => {
@@ -100,7 +99,7 @@ const CodeEditor = () => {
         [currentUser.uid]: {
           user: { uid: currentUser.uid, name: currentUser.displayName || currentUser.email },
           position,
-        }
+        },
       }));
     }
   };
@@ -167,28 +166,11 @@ const CodeEditor = () => {
   }, [cursorPositions]);
 
   // Listen to content changes—for example, newline insertions.
-  // Here we deliberately do nothing to avoid affecting remote cursors.
   useEffect(() => {
     if (editorRef.current) {
       const model = editorRef.current.getModel();
       const disposables = model.onDidChangeContent((e) => {
-        // As an example, you could decide to update the local user only on newline insertion.
-        // For now, we're not modifying cursorPositions here.
-        const currentUser = auth.currentUser;
-        if (currentUser && editorRef.current) {
-          // Uncomment below if you wish to update local cursor on newline insertion.
-          // const localPos = editorRef.current.getPosition();
-          // const isNewlineInsertion = e.changes.some(change => change.text.includes("\n"));
-          // if (isNewlineInsertion) {
-          //   setCursorPositions(prev => ({
-          //     ...prev,
-          //     [currentUser.uid]: {
-          //       ...prev[currentUser.uid],
-          //       position: localPos
-          //     }
-          //   }));
-          // }
-        }
+        // You can update the cursor here on specific content changes if needed.
       });
       return () => disposables.dispose();
     }
@@ -198,22 +180,50 @@ const CodeEditor = () => {
   const renderCursorStyles = () => {
     const currentUser = auth.currentUser;
     if (!currentUser) return null;
+    const color = getColorForUser(currentUser.uid);
+    const fullName = currentUser.displayName || currentUser.email;
+    const initial = fullName.charAt(0).toUpperCase();
     return (
       <style>
         {`
-          .cursor-pointer-${currentUser.uid}:before {
-            content: '';
-            display: inline-block;
-            border-left: 2px solid ${getColorForUser(currentUser.uid)};
-            margin-right: 2px;
-            height: 1em;
+          /* Ensure the cursor element is positioned relative */
+          .cursor-pointer-${currentUser.uid} {
+            position: relative;
           }
-          .cursor-label-${currentUser.uid}::after {
-            content: "${currentUser.displayName || currentUser.email}";
+          /* Small box below the cursor showing the initial */
+          .cursor-pointer-${currentUser.uid}::before {
+            content: '${initial}';
             position: absolute;
-            margin-left: 4px;
-            color: ${getColorForUser(currentUser.uid)};
+            bottom: -20px;
+            left: 0;
+            background: ${color};
+            color: #fff;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            border-radius: 3px;
+          }
+          /* Hidden full name label that appears on hover */
+          .cursor-pointer-${currentUser.uid}::after {
+            content: "${fullName}";
+            position: absolute;
+            bottom: -40px;
+            left: 0;
+            background: #333;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
             font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            pointer-events: none;
+          }
+          .cursor-pointer-${currentUser.uid}:hover::after {
+            opacity: 1;
           }
         `}
       </style>
@@ -228,17 +238,17 @@ const CodeEditor = () => {
 
   if (!isJoinAccepted) {
     return (
-      <div style={{ padding: "2rem", textAlign: "center" }}>
-        <h2>Waiting for admin approval...</h2>
-        <p>Please wait while the admin approves your join request.</p>
+      <div className="flex flex-col justify-center items-center p-8">
+        <h2 className="text-2xl font-bold mb-2">Waiting for admin approval...</h2>
+        <p className="text-gray-600">Please wait while the admin approves your join request.</p>
       </div>
     );
   }
 
   return (
-    <>
+    <div className="bg-gray-800 rounded-lg shadow-lg mx-6 my-6 p-4">
       <Editor
-        height="70vh"
+        height="75vh"
         defaultLanguage="javascript"
         value={code}
         onChange={handleCodeChange}
@@ -252,10 +262,10 @@ const CodeEditor = () => {
             handleCursorChange();
           });
         }}
+        className="mb-4"
       />
       {renderCursorStyles()}
-      {isAdmin && <JoinRequests />}
-    </>
+    </div>
   );
 };
 
