@@ -55,7 +55,9 @@ const EditorPage = () => {
   };
 
   const removeNotification = (id) => {
-    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+    setNotifications((prev) =>
+      prev.filter((notification) => notification.id !== id)
+    );
   };
 
   const onLeaveRoom = () => {
@@ -118,8 +120,8 @@ const EditorPage = () => {
         </main>
 
         {/* Sidebar Section */}
-        <aside className="w-full lg:w-1/3 p-4 space-y-4">
-          <div className="bg-white shadow rounded-lg p-4 h-full">
+        <aside className="w-full lg:w-1/3 p-4">
+          <div className="bg-white shadow rounded-lg p-4 h-[600px] flex flex-col">
             <h2 className="text-xl font-bold text-gray-800 mb-2">Chat</h2>
             <ChatBox roomId={roomId} user={user} />
           </div>
