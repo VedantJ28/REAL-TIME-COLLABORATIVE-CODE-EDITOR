@@ -12,7 +12,6 @@ const app = express();
 const server = createServer(app);
 
 // Use the explicit allowed origin for your client:
-const allowedOrigin = "https://real-time-collaborative-code-editor-gray.vercel.app";
 
 // Optionally force the headers for all responses (for debugging)
 // app.use((req, res, next) => {
@@ -23,7 +22,6 @@ const allowedOrigin = "https://real-time-collaborative-code-editor-gray.vercel.a
 
 // Express CORS middleware
 app.use(cors({
-  origin: allowedOrigin,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -32,7 +30,6 @@ app.use(cors({
 // Configure Socket.IO with CORS settings matching the client:
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigin,
     methods: ["GET", "POST"],
     credentials: true,
   },
