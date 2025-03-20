@@ -5,10 +5,10 @@ const UserList = () => {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    console.log("UserList mounted, registering updateUsers listener");
+    // console.log("UserList mounted, registering updateUsers listener");
 
     const handleUpdateUsers = (onlineUsers) => {
-      console.log("Received updateUsers:", onlineUsers);
+      // console.log("Received updateUsers:", onlineUsers);
       setUsers(onlineUsers);
     };
 
@@ -16,7 +16,7 @@ const UserList = () => {
 
     // Cleanup the listener on unmount
     return () => {
-      console.log("UserList unmounted, removing updateUsers listener");
+      // console.log("UserList unmounted, removing updateUsers listener");
       socket.off("updateUsers", handleUpdateUsers);
     };
   }, []);

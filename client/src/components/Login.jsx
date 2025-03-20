@@ -26,7 +26,7 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     try {
       const user = await googleLogin();
-      console.log('Logged in with Google:', user);
+      // console.log('Logged in with Google:', user);
       navigate('/');
     } catch (err) {
       setError(err.message);
