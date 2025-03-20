@@ -1,8 +1,6 @@
 import { io } from "socket.io-client";
 
-const socket = io("https://real-time-collaborative-code-editor-dlbu.vercel.app", {
-  withCredentials: true, // Include credentials if needed
-});
+const socket = io("https://real-time-collaborative-code-editor-dlbu.vercel.app");
 
 export const joinRoom = (roomId, user) => {
   console.log("Joining room:", { roomId, user }); // Debug log
