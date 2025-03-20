@@ -11,19 +11,30 @@ dotenv.config();
 const app = express();
 const server = createServer(app);
 
-// Allow only the specific origin of your client
+// Use the explicit allowed origin for your client:
 const allowedOrigin = "https://real-time-collaborative-code-editor-gray.vercel.app";
+
+// Optionally force the headers for all responses (for debugging)
+// app.use((req, res, next) => {
+//   res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+//   res.setHeader("Access-Control-Allow-Credentials", "true");
+//   next();
+// });
 
 // Express CORS middleware
 app.use(cors({
-  origin: "*"
+  origin: allowedOrigin,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
 }));
 
-// Configure Socket.IO with CORS
+// Configure Socket.IO with CORS settings matching the client:
 const io = new Server(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: allowedOrigin,
+    methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
