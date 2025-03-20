@@ -12,22 +12,16 @@ const app = express();
 const server = createServer(app);
 
 
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  next();
-});
-
 app.use(cors());
-
+app.use(express.json());
 
 // Configure Socket.IO with CORS settings matching the client:
 const io = new Server(server, {
   cors:{
-    origin:"*"
+    origin:"*",
+    methods:["GET", "POST"],
   }
 });
-
-app.use(express.json());
 
 // Setup WebSockets
 setupSocket(io);
