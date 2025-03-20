@@ -12,29 +12,22 @@ const app = express();
 const server = createServer(app);
 
 // Allow only the specific origin of your client
-const allowedOrigins = [
-  "https://real-time-collaborative-code-editor-gray.vercel.app","https://real-time-collaborative-code-editor-vedantj28s-projects.vercel.app","https://real-time-collaborative-code-edi-git-cb5b77-vedantj28s-projects.vercel.app","*"
-];
+const allowedOrigin = "https://real-time-collaborative-code-editor-gray.vercel.app";
 
+// Express CORS middleware
 app.use(cors({
-  origin: (origin, callback) => {
-    if (allowedOrigins.includes(origin) || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: allowedOrigin,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  // credentials: true, // Allow cookies and credentials
+  credentials: true, // Enable credentials
 }));
 
 // Configure Socket.IO with CORS
 const io = new Server(server, {
   cors: {
-    origin: "https://real-time-collaborative-code-editor-gray.vercel.app" || "https://real-time-collaborative-code-editor-vedantj28s-projects.vercel.app" || "https://real-time-collaborative-code-edi-git-cb5b77-vedantj28s-projects.vercel.app" || "*",
+    origin: allowedOrigin,
     methods: ["GET", "POST"],
-    // credentials: true, // Allow cookies and credentials
+    credentials: true, // Enable credentials
   },
 });
 
