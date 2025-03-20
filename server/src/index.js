@@ -10,11 +10,24 @@ dotenv.config();
 
 const app = express();
 const server = createServer(app);
+
+// Configure CORS middleware
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || "*", // Allow specific origin
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true, // Allow cookies if needed
+}));
+
+// Configure Socket.IO with CORS
 const io = new Server(server, {
-  cors: { origin: "*" },
+  cors: {
+    origin: process.env.CORS_ORIGIN || "*", // Allow specific origin
+    methods: ["GET", "POST"],
+    credentials: true, // Allow cookies if needed
+  },
 });
 
-app.use(cors());
 app.use(express.json());
 
 // Setup WebSockets
@@ -33,8 +46,8 @@ app.post("/chat/send", async (req, res) => {
   res.status(200).json({ success: true });
 });
 
-app.get('/', (req, res) =>{
-  res.send("Hello World")
+app.get('/', (req, res) => {
+  res.send("Hello World");
 });
 
 server.listen(process.env.PORT || 5000, () => {
