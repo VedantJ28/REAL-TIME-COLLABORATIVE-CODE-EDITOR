@@ -10,8 +10,14 @@ dotenv.config();
 
 const app = express();
 const server = createServer(app);
-
 app.use(cors());
+
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  next();
+});
+
+
 
 // Configure Socket.IO with CORS settings matching the client:
 const io = new Server(server, {
