@@ -92,6 +92,27 @@ const EditorPage = () => {
     }
   };
 
+  // Confirm when user clicks the browser back button
+  useEffect(() => {
+    const handleBrowserBack = (e) => {
+      e.preventDefault();
+      // Show a default confirm dialog
+      const confirmed = window.confirm("Are you sure you want to leave the room?");
+      if (!confirmed) {
+        // Push the current page back into history if user cancels
+        window.history.pushState(null, "", window.location.href);
+      } else {
+        handleConfirmLeave();
+      }
+    };
+    window.addEventListener("popstate", handleBrowserBack);
+    // Push a dummy state to catch back button
+    window.history.pushState(null, "", window.location.href);
+    return () => {
+      window.removeEventListener("popstate", handleBrowserBack);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Navbar */}

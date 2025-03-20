@@ -4,8 +4,9 @@ import { v4 as uuidv4 } from "uuid";
 import { logout } from "../utils/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../utils/firebase";
-import roomIcon from "../assets/join-icon.svg"; // Import as an image
+import joinIcon from "../assets/join-icon.svg"; // Import as an image
 import logoutIcon from "../assets/logout-icon.svg"; // Import as an image
+import createIcon from "../assets/create-icon.svg";
 
 const RoomPage = () => {
   const [roomId, setRoomId] = useState("");
@@ -19,10 +20,15 @@ const RoomPage = () => {
     return unsubscribe;
   }, []);
 
-  // Generate a new room ID
+  // Create a new room by generating a room ID and navigating to the editor
   const createRoom = () => {
+    if (!currentUser) {
+      alert("Please ensure you are logged in before creating a room.");
+      return;
+    }
     const newRoomId = uuidv4();
-    setRoomId(newRoomId);
+    const userName = currentUser.displayName || currentUser.email;
+    navigate(`/editor/${newRoomId}?name=${encodeURIComponent(userName)}`);
   };
 
   // Join the editor with entered room ID and user's name from auth state
@@ -38,8 +44,8 @@ const RoomPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 flex flex-col items-center py-12 px-4">
       {/* Header with Logo and Company Name */}
-      <header className="w-full max-w-5xl flex items-center justify-between mb-12 px-6">
-        <div className="flex items-center space-x-4">
+      <header className="w-full max-w-5xl flex flex-col md:flex-row items-center justify-between mb-12 px-6">
+        <div className="flex items-center space-x-4 mb-4 md:mb-0">
           <img
             src="/logo.png" // Replace with your logo path
             alt="Company Logo"
@@ -91,14 +97,14 @@ const RoomPage = () => {
             onClick={createRoom}
             className="flex-1 py-4 px-8 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center justify-center space-x-3 shadow-md"
           >
-            <img src={roomIcon} alt="Room Icon" className="w-6 h-6" />
-            <span className="text-lg font-medium">Generate Room ID</span>
+            <img src={createIcon} alt="Room Icon" className="w-6 h-6" />
+            <span className="text-lg font-medium">Create Room</span>
           </button>
           <button
             onClick={joinRoom}
             className="flex-1 py-4 px-8 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 flex items-center justify-center space-x-3 shadow-md"
           >
-            <img src={roomIcon} alt="Room Icon" className="w-6 h-6" />
+            <img src={joinIcon} alt="Room Icon" className="w-6 h-6" />
             <span className="text-lg font-medium">Join Room</span>
           </button>
         </div>

@@ -11,14 +11,14 @@ const cursorPositions = {}; // Store cursor positions per room
 const emitUpdatedUsers = (io, roomId) => {
   if (onlineUsers[roomId]) {
     const userNames = Object.values(onlineUsers[roomId]).map((u) => u.name);
-    console.log(`Emitting updated users for room ${roomId}:`, userNames);
+    // console.log(`Emitting updated users for room ${roomId}:`, userNames);
     io.in(roomId).emit("updateUsers", userNames);
   }
 };
 
 export default function setupSocket(io) {
   io.on("connection", (socket) => {
-    console.log(`User connected: ${socket.id}`);
+    // console.log(`User connected: ${socket.id}`);
 
     // When a socket wants to join a room, send along roomId and user info.
     socket.on("joinRoom", async (data) => {
@@ -26,7 +26,7 @@ export default function setupSocket(io) {
 
       // Validate the user object
       if (!user || !user.name || !user.uid) {
-        console.error("Invalid user object:", user);
+        // console.error("Invalid user object:", user);
         socket.emit("error", { message: "Invalid user object" });
         return;
       }
@@ -39,7 +39,7 @@ export default function setupSocket(io) {
         socket.join(roomId);
         users[socket.id] = roomId;
         onlineUsers[roomId][socket.id] = user;
-        console.log(`Room ${roomId} created by admin ${user.name}`);
+        // console.log(`Room ${roomId} created by admin ${user.name}`);
         socket.emit("roomAdminStatus", { isAdmin: true });
 
         // Send empty chat history to the admin
@@ -62,7 +62,7 @@ export default function setupSocket(io) {
             requesterId: socket.id,
             user,
           });
-          console.log(`User ${user.name} requested to join room ${roomId}`);
+          // console.log(`User ${user.name} requested to join room ${roomId}`);
         }
       }
     });
@@ -79,22 +79,22 @@ export default function setupSocket(io) {
           onlineUsers[roomId] = onlineUsers[roomId] || {};
           onlineUsers[roomId][data.requesterId] = request.user;
           requesterSocket.emit("joinAccepted", { roomId, user: request.user });
-          console.log(
-            `Admin approved join request for ${request.user.name} in room ${roomId}`
-          );
+          // console.log(
+          //   `Admin approved join request for ${request.user.name} in room ${roomId}`
+          // );
           emitUpdatedUsers(io, roomId);
 
           // Notify all users except admin about the new user joining
           io.to(roomId).emit("userJoined", { user: request.user });
         } else {
           requesterSocket.emit("joinRejected", { roomId });
-          console.log(
-            `Admin rejected join request for ${request.user.name} in room ${roomId}`
-          );
+          // console.log(
+          //   `Admin rejected join request for ${request.user.name} in room ${roomId}`
+          // );
         }
         delete pendingRequests[data.requesterId];
       } else {
-        console.error("No pending request found for requesterId:", data.requesterId);
+        // console.error("No pending request found for requesterId:", data.requesterId);
       }
     });
 
@@ -126,14 +126,14 @@ export default function setupSocket(io) {
       user.socketId = socket.id;
       cursorPositions[roomId][user.uid] = { user, position };
 
-      console.log(
-        `Cursor position updated for user ${user.name}:`,
-        position
-      );
-      console.log(
-        `Broadcasting cursor positions for room ${roomId}:`,
-        cursorPositions[roomId]
-      );
+      // console.log(
+      //   `Cursor position updated for user ${user.name}:`,
+      //   position
+      // );
+      // console.log(
+      //   `Broadcasting cursor positions for room ${roomId}:`,
+      //   cursorPositions[roomId]
+      // );
       socket.to(roomId).emit(
         "updateCursorPositions",
         cursorPositions[roomId]
@@ -154,7 +154,7 @@ export default function setupSocket(io) {
           io.to(roomId).emit("userLeft", { user });
         }
       }
-      console.log(`Socket ${socket.id} left room ${roomId}`);
+      // console.log(`Socket ${socket.id} left room ${roomId}`);
     });
 
     // Listen for admin closing the room.
@@ -162,7 +162,7 @@ export default function setupSocket(io) {
       if (roomAdmins[roomId] && roomAdmins[roomId].socketId === socket.id) {
         io.to(roomId).emit("roomClosed");
         io.in(roomId).socketsLeave(roomId);
-        console.log(`Room ${roomId} closed by admin ${socket.id}`);
+        // console.log(`Room ${roomId} closed by admin ${socket.id}`);
 
         // Delete chat messages for the room
         await deleteChatMessages(roomId);
@@ -176,13 +176,13 @@ export default function setupSocket(io) {
 
     // Add this below the other socket event listeners
     socket.on("languageChange", ({ roomId, language }) => {
-      console.log(`Language changed to ${language} in room ${roomId}`);
+      // console.log(`Language changed to ${language} in room ${roomId}`);
       socket.to(roomId).emit("languageUpdate", { language });
     });
 
     // Handle disconnections
     socket.on("disconnect", () => {
-      console.log(`User disconnected: ${socket.id}`);
+      // console.log(`User disconnected: ${socket.id}`);
       if (pendingRequests[socket.id]) {
         delete pendingRequests[socket.id];
       }
@@ -195,7 +195,7 @@ export default function setupSocket(io) {
       }
       for (const room in roomAdmins) {
         if (roomAdmins[room].socketId === socket.id) {
-          console.log(`Admin of room ${room} disconnected.`);
+          // console.log(`Admin of room ${room} disconnected.`);
           delete roomAdmins[room];
           if (onlineUsers[room]) {
             delete onlineUsers[room];

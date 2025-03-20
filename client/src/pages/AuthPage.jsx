@@ -26,7 +26,7 @@ const AuthPage = () => {
             Welcome Back!
           </h2>
           <p className="mt-2 text-center text-lg text-gray-200">
-            Join us and explore new possibilities.
+            Join us and collaborate with other users.
           </p>
         </div>
       </div>

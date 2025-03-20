@@ -12,7 +12,7 @@ export const login = async (email, password) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password)
     return userCredential.user
   } catch (error) {
-    console.error("Login error:", error)
+    // console.error("Login error:", error)
     throw error
   }
 }
@@ -22,7 +22,7 @@ export const register = async (email, password) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password)
     return userCredential.user
   } catch (error) {
-    console.error("Registration error:", error)
+    // console.error("Registration error:", error)
     throw error
   }
 }
@@ -33,7 +33,7 @@ export const googleLogin = async () => {
     const result = await signInWithPopup(auth, provider)
     return result.user
   } catch (error) {
-    console.error("Google login error:", error)
+    // console.error("Google login error:", error)
     throw error
   }
 }
@@ -42,7 +42,7 @@ export const logout = async () => {
   try {
     await signOut(auth)
   } catch (error) {
-    console.error("Logout error:", error)
+    // console.error("Logout error:", error)
     throw error
   }
 }
