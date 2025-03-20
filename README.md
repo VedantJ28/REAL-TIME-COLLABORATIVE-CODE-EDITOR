@@ -133,5 +133,5 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 
 For any questions or feedback, feel free to reach out:
 
-- **Email**: vedantjadhav324@example.com
+- **Email**: vedantjadhav324@gmail.com
 - **GitHub**: [VedantJ28](https://github.com/VedantJ28)
