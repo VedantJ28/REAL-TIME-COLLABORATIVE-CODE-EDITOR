@@ -26,7 +26,7 @@ app.use(cors({
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true, // Allow cookies and credentials
+  // credentials: true, // Allow cookies and credentials
 }));
 
 // Configure Socket.IO with CORS
@@ -34,7 +34,7 @@ const io = new Server(server, {
   cors: {
     origin: "https://real-time-collaborative-code-editor-gray.vercel.app",
     methods: ["GET", "POST"],
-    credentials: true, // Allow cookies and credentials
+    // credentials: true, // Allow cookies and credentials
   },
 });
 
