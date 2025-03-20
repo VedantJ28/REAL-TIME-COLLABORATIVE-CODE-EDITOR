@@ -21,19 +21,10 @@ const server = createServer(app);
 // });
 
 // Express CORS middleware
-app.use(cors({
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-}));
+app.use(cors());
 
 // Configure Socket.IO with CORS settings matching the client:
-const io = new Server(server, {
-  cors: {
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-});
+const io = new Server(server);
 
 app.use(express.json());
 
