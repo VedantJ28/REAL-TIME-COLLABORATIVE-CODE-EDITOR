@@ -11,12 +11,16 @@ dotenv.config();
 const app = express();
 const server = createServer(app);
 
-
-
-app.use(cors());
+app.use(cors({
+  origin:"*"
+}));
 
 // Configure Socket.IO with CORS settings matching the client:
-const io = new Server(server);
+const io = new Server(server, {
+  cors:{
+    origin:"*"
+  }
+});
 
 app.use(express.json());
 
