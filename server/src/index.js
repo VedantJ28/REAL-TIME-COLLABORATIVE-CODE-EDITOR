@@ -14,27 +14,16 @@ const server = createServer(app);
 // Allow only the specific origin of your client
 const allowedOrigin = "https://real-time-collaborative-code-editor-gray.vercel.app";
 
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://real-time-collaborative-code-editor-gray.vercel.app');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS'); // Add allowed methods
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Add allowed headers
-  next();
-});
-
 // Express CORS middleware
 app.use(cors({
-  origin: "https://real-time-collaborative-code-editor-gray.vercel.app",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true, // Enable credentials
+  origin: "*"
 }));
 
 // Configure Socket.IO with CORS
 const io = new Server(server, {
   cors: {
-    origin: "https://real-time-collaborative-code-editor-gray.vercel.app",
-    methods: ["GET", "POST"],
-    credentials: true, // Enable credentials
+    origin: "*",
+    methods: ["GET", "POST"]
   },
 });
 
