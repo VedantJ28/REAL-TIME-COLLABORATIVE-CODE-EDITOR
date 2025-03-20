@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 
 const socket = io("https://real-time-collaborative-code-editor-dlbu.vercel.app", {
-  withCredentials: true, // Include credentials if needed
+  withCredentials: false, // Include credentials if needed
 });
 
 export const joinRoom = (roomId, user) => {
