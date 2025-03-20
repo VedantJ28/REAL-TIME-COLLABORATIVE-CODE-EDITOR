@@ -11,20 +11,28 @@ dotenv.config();
 const app = express();
 const server = createServer(app);
 
-// Configure CORS middleware
+// Allow only the specific origin of your client
+const allowedOrigins = [process.env.CLIENT_ORIGIN || "https://real-time-collaborative-code-editor-gray.vercel.app"];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "*", // Allow specific origin
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true, // Allow cookies if needed
+  credentials: true, // Allow cookies and credentials
 }));
 
 // Configure Socket.IO with CORS
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "*", // Allow specific origin
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
-    credentials: true, // Allow cookies if needed
+    credentials: true, // Allow cookies and credentials
   },
 });
 
