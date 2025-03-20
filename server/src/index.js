@@ -13,7 +13,7 @@ const server = createServer(app);
 
 // Allow only the specific origin of your client
 const allowedOrigins = [
-  "https://real-time-collaborative-code-editor-gray.vercel.app",
+  "https://real-time-collaborative-code-editor-gray.vercel.app","https://real-time-collaborative-code-editor-vedantj28s-projects.vercel.app","https://real-time-collaborative-code-edi-git-cb5b77-vedantj28s-projects.vercel.app"
 ];
 
 app.use(cors({
@@ -32,7 +32,7 @@ app.use(cors({
 // Configure Socket.IO with CORS
 const io = new Server(server, {
   cors: {
-    origin: "https://real-time-collaborative-code-editor-gray.vercel.app",
+    origin: "https://real-time-collaborative-code-editor-gray.vercel.app" || "https://real-time-collaborative-code-editor-vedantj28s-projects.vercel.app" || "https://real-time-collaborative-code-edi-git-cb5b77-vedantj28s-projects.vercel.app",
     methods: ["GET", "POST"],
     // credentials: true, // Allow cookies and credentials
   },
