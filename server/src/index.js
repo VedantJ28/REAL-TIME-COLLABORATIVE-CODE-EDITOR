@@ -14,6 +14,12 @@ const server = createServer(app);
 // Allow only the specific origin of your client
 const allowedOrigin = "https://real-time-collaborative-code-editor-gray.vercel.app";
 
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  next();
+});
+
 // Express CORS middleware
 app.use(cors({
   origin: allowedOrigin,
