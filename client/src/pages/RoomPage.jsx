@@ -3,19 +3,32 @@ import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { logout } from "../utils/auth";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../utils/firebase";
-import joinIcon from "../assets/join-icon.svg"; // Import as an image
-import logoutIcon from "../assets/logout-icon.svg"; // Import as an image
+import { auth, db } from "../utils/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import joinIcon from "../assets/join-icon.svg";
+import logoutIcon from "../assets/logout-icon.svg";
 import createIcon from "../assets/create-icon.svg";
 
 const RoomPage = () => {
   const [roomId, setRoomId] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
+  const [userName, setUserName] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      if (user) {
+        // Fetch additional user data from Firestore if available
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().name) {
+          setUserName(docSnap.data().name);
+        } else {
+          // Fallback to displayName or email
+          setUserName(user.displayName || user.email);
+        }
+      }
     });
     return unsubscribe;
   }, []);
@@ -27,17 +40,15 @@ const RoomPage = () => {
       return;
     }
     const newRoomId = uuidv4();
-    const userName = currentUser.displayName || currentUser.email;
     navigate(`/editor/${newRoomId}?name=${encodeURIComponent(userName)}`);
   };
 
-  // Join the editor with entered room ID and user's name from auth state
+  // Join the editor with entered room ID and user's name from Firestore/auth state
   const joinRoom = () => {
     if (!currentUser || !roomId.trim()) {
       alert("Please ensure you are logged in and enter a valid Room ID.");
       return;
     }
-    const userName = currentUser.displayName || currentUser.email;
     navigate(`/editor/${roomId}?name=${encodeURIComponent(userName)}`);
   };
 
@@ -70,7 +81,7 @@ const RoomPage = () => {
       <div className="w-full max-w-3xl bg-white shadow-xl rounded-2xl p-10">
         {currentUser && (
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-            Welcome, {currentUser.displayName || currentUser.email}!
+            Welcome, {userName}!
           </h2>
         )}
         <h1 className="text-2xl font-semibold text-gray-700 mb-8 text-center">
